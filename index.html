@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Oceane - TCB Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #0891b2;
+            border-radius: 10px;
+        }
+        
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 pb-10 selection:bg-cyan-200">
+
+    <!-- Header Fixo -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="font-black text-xl tracking-tight cursor-pointer flex items-center gap-2" onclick="navigateTo('home')">
+                <div class="w-8 h-8 bg-cyan-600 rounded-lg flex items-center justify-center text-white">
+                    <span class="leading-none mt-0.5">T</span>
+                </div>
+                Team Oceane
+            </div>
+            
+            <button onclick="navigateTo('checkout')" class="relative p-2 text-gray-600 hover:text-cyan-600 transition-colors">
+                <i data-lucide="shopping-cart" class="w-6 h-6"></i>
+                <span id="cart-count-badge" class="hidden absolute top-0 right-0 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center border-2 border-white">
+                    0
+                </span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Container Principal (Onde as telas serão injetadas) -->
+    <main id="app-content">
+        <!-- O conteúdo será carregado aqui via JavaScript -->
+    </main>
+
+    <!-- Modal de Alerta Customizado -->
+    <div id="custom-alert" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 hidden">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fadeIn text-center">
+            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="info" class="w-6 h-6"></i>
+            </div>
+            <p id="alert-message" class="text-gray-700 font-medium mb-6"></p>
+            <button onclick="closeAlert()" class="w-full bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-black transition-colors">
+                Entendido
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Configurações ---
+        // Código Pix Copia e Cola fornecido pelo usuário
+        const PIX_CODE = '00020101021126580014br.gov.bcb.pix01365d251342-6918-483a-9a41-ad40fe03e8195204000053039865802BR592048 7 5 J C D RIBEIRO6013SAO JOAQUIM D62070503***6304F71B';
+        const WHATSAPP_NUMBER = '5531975043485';
+
+        const PRODUCTS = [
+            {
+                id: 'dryfit',
+                name: 'Camisa Dry Fit Team Oceane',
+                price: 79.90,
+                description: 'Camisa em tecido Dry Fit, ideal para treinos e competições de alta intensidade.',
+                images: [
+                    'https://images.unsplash.com/photo-1581655353564-df123a1eb820?auto=format&fit=crop&q=80&w=800', 
+                    'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&q=80&w=800'
+                ],
+                colors: ['Azul'],
+                sizes: ['P', 'M', 'G', 'GG', 'EXG'],
+                genders: ['Masculino', 'Feminino']
+            },
+            {
+                id: 'oversize',
+                name: 'Camisa Oversize Team Oceane',
+                price: 89.90,
+                description: 'Estilo e conforto com a modelagem Oversize. Perfeita para o dia a dia e lifestyle.',
+                images: [
+                    'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&q=80&w=800', 
+                    'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?auto=format&fit=crop&q=80&w=800'
+                ],
+                colors: ['Preta', 'Rosa'],
+                sizes: ['P', 'M', 'G', 'GG', 'EXG'],
+                genders: ['Masculino', 'Feminino', 'Unissex']
+            }
+        ];
+
+        // --- Estado Global ---
+        let state = {
+            view: 'home',
+            cart: [],
+            selectedProduct: null,
+            config: {
+                size: '',
+                gender: '',
+                color: '',
+                activeImageIndex: 0
+            }
+        };
+
+        // --- Funções de Navegação e Renderização ---
+        function navigateTo(view, productId = null) {
+            state.view = view;
+            if (productId) {
+                state.selectedProduct = PRODUCTS.find(p => p.id === productId);
+                state.config = {
+                    size: '',
+                    gender: '',
+                    color: state.selectedProduct.colors.length === 1 ? state.selectedProduct.colors[0] : '',
+                    activeImageIndex: 0
+                };
+            }
+            render();
+            window.scrollTo(0, 0);
+        }
+
+        function render() {
+            const container = document.getElementById('app-content');
+            updateCartBadge();
+
+            switch(state.view) {
+                case 'home': container.innerHTML = renderHome(); break;
+                case 'product': container.innerHTML = renderProductView(); break;
+                case 'checkout': container.innerHTML = renderCheckout(); break;
+                case 'payment': container.innerHTML = renderPayment(); break;
+            }
+
+            // Inicializa ícones do Lucide após renderizar
+            lucide.createIcons();
+        }
+
+        function updateCartBadge() {
+            const badge = document.getElementById('cart-count-badge');
+            if (state.cart.length > 0) {
+                badge.innerText = state.cart.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // --- Componentes ---
+
+        function renderHome() {
+            return `
+                <div class="max-w-4xl mx-auto p-4 animate-fadeIn">
+                    <div class="text-center mb-10 mt-6">
+                        <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight uppercase">Team Oceane</h1>
+                        <p class="text-gray-600 mt-2 text-lg">Apoie nossa equipe no campeonato TCB! Garanta sua camisa exclusiva.</p>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-8">
+                        ${PRODUCTS.map(product => `
+                            <div class="bg-white rounded-2xl shadow-lg overflow-hidden transition-transform transform hover:-translate-y-1">
+                                <div class="h-80 bg-gray-50 overflow-hidden relative group cursor-pointer flex items-center justify-center" onclick="navigateTo('product', '${product.id}')">
+                                    <img src="${product.images[0]}" alt="${product.name}" class="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105 mix-blend-multiply" />
+                                    <div class="absolute inset-0 bg-black bg-opacity-5 group-hover:bg-opacity-0 transition-all"></div>
+                                    <div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full font-bold text-gray-900 shadow-sm">
+                                        R$ ${product.price.toFixed(2).replace('.', ',')}
+                                    </div>
+                                </div>
+                                <div class="p-6 text-center">
+                                    <h2 class="text-2xl font-bold text-gray-800">${product.name}</h2>
+                                    <p class="text-gray-500 text-sm mt-2">${product.description}</p>
+                                    <button onclick="navigateTo('product', '${product.id}')" class="mt-6 w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-xl transition-colors">
+                                        Ver Detalhes e Comprar
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderProductView() {
+            const p = state.selectedProduct;
+            return `
+                <div class="max-w-4xl mx-auto p-4 animate-fadeIn">
+                    <button onclick="navigateTo('home')" class="flex items-center text-gray-600 hover:text-cyan-600 mb-6 transition-colors font-medium">
+                        <i data-lucide="arrow-left" class="w-5 h-5 mr-2"></i> Voltar para produtos
+                    </button>
+
+                    <div class="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row">
+                        <div class="md:w-1/2 bg-gray-50 flex flex-col p-4">
+                            <div class="relative h-96 w-full rounded-2xl overflow-hidden shadow-sm flex items-center justify-center bg-white">
+                                <img id="main-product-img" src="${p.images[state.config.activeImageIndex]}" class="w-full h-full object-contain mix-blend-multiply" />
+                            </div>
+                            ${p.images.length > 1 ? `
+                                <div class="flex gap-2 mt-4 overflow-x-auto pb-2 custom-scrollbar">
+                                    ${p.images.map((img, idx) => `
+                                        <button onclick="updateActiveImage(${idx})" class="w-20 h-20 rounded-lg overflow-hidden border-2 flex-shrink-0 bg-white ${state.config.activeImageIndex === idx ? 'border-cyan-500' : 'border-transparent opacity-70'}">
+                                            <img src="${img}" class="w-full h-full object-cover mix-blend-multiply" />
+                                        </button>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="md:w-1/2 p-8 flex flex-col justify-center">
+                            <h2 class="text-3xl font-extrabold text-gray-900">${p.name}</h2>
+                            <p class="text-2xl text-cyan-600 font-bold mt-2">R$ ${p.price.toFixed(2).replace('.', ',')}</p>
+                            
+                            <div class="mt-8 space-y-6">
+                                ${p.colors.length > 1 ? `
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Cor</label>
+                                        <div class="flex gap-3">
+                                            ${p.colors.map(color => `
+                                                <button onclick="updateConfig('color', '${color}')" class="px-4 py-2 rounded-lg border-2 font-medium transition-all ${state.config.color === color ? 'border-cyan-600 bg-cyan-50 text-cyan-800' : 'border-gray-200 text-gray-600 hover:border-gray-300'}">
+                                                    ${color}
+                                                </button>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Modelo</label>
+                                    <div class="flex flex-wrap gap-3">
+                                        ${p.genders.map(gender => `
+                                            <button onclick="updateConfig('gender', '${gender}')" class="px-4 py-2 rounded-lg border-2 font-medium transition-all ${state.config.gender === gender ? 'border-cyan-600 bg-cyan-50 text-cyan-800' : 'border-gray-200 text-gray-600 hover:border-gray-300'}">
+                                                ${gender}
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Tamanho</label>
+                                    <div class="flex flex-wrap gap-2">
+                                        ${p.sizes.map(size => `
+                                            <button onclick="updateConfig('size', '${size}')" class="w-12 h-12 rounded-lg border-2 font-bold flex items-center justify-center transition-all ${state.config.size === size ? 'border-cyan-600 bg-cyan-600 text-white shadow-md' : 'border-gray-200 text-gray-700 hover:border-gray-300 bg-white'}">
+                                                ${size}
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onclick="addToCart()" class="mt-10 w-full bg-gray-900 hover:bg-black text-white font-bold py-4 px-6 rounded-xl flex justify-center items-center shadow-lg transition-transform hover:scale-[1.02]">
+                                <i data-lucide="shopping-cart" class="mr-2 w-5 h-5"></i> Adicionar ao Pedido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCheckout() {
+            const total = state.cart.reduce((sum, item) => sum + item.price, 0);
+            return `
+                <div class="max-w-3xl mx-auto p-4 animate-fadeIn">
+                    <div class="flex items-center justify-between mb-8">
+                        <h2 class="text-3xl font-extrabold text-gray-900">Seu Pedido</h2>
+                        <button onclick="navigateTo('home')" class="text-cyan-600 font-semibold hover:underline">Adicionar mais itens</button>
+                    </div>
+
+                    ${state.cart.length === 0 ? `
+                        <div class="text-center py-20 bg-white rounded-3xl shadow-sm border border-gray-100">
+                            <i data-lucide="shopping-cart" class="w-16 h-16 text-gray-300 mx-auto mb-4"></i>
+                            <p class="text-gray-500 text-lg">Seu carrinho está vazio.</p>
+                            <button onclick="navigateTo('home')" class="mt-6 text-cyan-600 font-bold hover:underline">Voltar à loja</button>
+                        </div>
+                    ` : `
+                        <div class="bg-white rounded-3xl shadow-lg p-6 md:p-8">
+                            <div class="space-y-6">
+                                ${state.cart.map(item => `
+                                    <div class="flex items-center justify-between border-b border-gray-100 pb-6 last:border-0 last:pb-0">
+                                        <div class="flex items-center">
+                                            <div class="w-16 h-16 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 border border-gray-100 flex items-center justify-center">
+                                                <img src="${item.image}" class="w-full h-full object-cover mix-blend-multiply" />
+                                            </div>
+                                            <div class="ml-4">
+                                                <h3 class="font-bold text-gray-800">${item.name}</h3>
+                                                <p class="text-sm text-gray-500">${item.color} | Tam: ${item.size} | ${item.gender}</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-4">
+                                            <span class="font-bold text-gray-900">R$ ${item.price.toFixed(2).replace('.', ',')}</span>
+                                            <button onclick="removeFromCart(${item.cartId})" class="text-red-400 hover:text-red-600 p-2 bg-red-50 rounded-full transition-colors">
+                                                <i data-lucide="x" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="mt-8 pt-6 border-t border-gray-200">
+                                <div class="flex justify-between items-center text-2xl font-black text-gray-900 mb-8">
+                                    <span>Total a Pagar</span>
+                                    <span class="text-cyan-600">R$ ${total.toFixed(2).replace('.', ',')}</span>
+                                </div>
+                                <button onclick="navigateTo('payment')" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-6 rounded-xl flex justify-center items-center shadow-lg shadow-green-100 text-lg transition-all hover:scale-[1.01]">
+                                    Confirmar e Pagar via PIX
+                                </button>
+                            </div>
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function renderPayment() {
+            const total = state.cart.reduce((sum, item) => sum + item.price, 0);
+            // URL para gerar QR Code baseado no código PIX fornecido
+            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(PIX_CODE)}`;
+            
+            return `
+                <div class="max-w-2xl mx-auto p-4 animate-fadeIn pb-20">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-extrabold text-gray-900">Pagamento PIX</h2>
+                        <p class="text-gray-600 mt-2">Siga os passos abaixo para confirmar sua compra.</p>
+                    </div>
+
+                    <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+                        <div class="bg-gray-50 p-6 border-b border-gray-100 text-center">
+                            <p class="text-sm text-gray-500 font-semibold uppercase tracking-wider">Valor Total</p>
+                            <p class="text-4xl font-black text-green-600 mt-1">R$ ${total.toFixed(2).replace('.', ',')}</p>
+                        </div>
+                        
+                        <div class="p-8">
+                            <div class="flex flex-col items-center">
+                                <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 mb-6">
+                                    <img src="${qrCodeUrl}" alt="QR Code PIX" class="w-64 h-64 object-contain" />
+                                </div>
+                                <p class="text-gray-700 font-medium mb-3 text-center italic">Opção 1: Escaneie o QR Code acima</p>
+                                
+                                <div class="w-full text-center mt-4">
+                                    <p class="text-gray-700 font-bold mb-3 uppercase text-sm tracking-wide">Opção 2: Pix Copia e Cola</p>
+                                    <div class="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+                                        <span id="pix-key-text" class="font-mono text-gray-600 truncate mr-4 text-xs select-all">${PIX_CODE}</span>
+                                        <button onclick="copyPix()" class="flex items-center justify-center bg-cyan-600 hover:bg-cyan-700 text-white p-2.5 rounded-lg transition-colors flex-shrink-0 shadow-sm">
+                                            <i id="copy-icon" data-lucide="copy" class="w-5 h-5"></i>
+                                            <span class="ml-2 font-bold text-sm hidden sm:inline">Copiar</span>
+                                        </button>
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-2 uppercase">Clique no botão para copiar o código</p>
+                                </div>
+                            </div>
+
+                            <hr class="my-8 border-gray-100" />
+
+                            <div class="bg-blue-50 text-blue-800 p-4 rounded-xl flex items-start mb-8 border border-blue-100">
+                                <i data-lucide="info" class="w-6 h-6 mr-3 flex-shrink-0 mt-0.5"></i>
+                                <p class="text-sm">
+                                    <strong>OBRIGATÓRIO:</strong> Após o pagamento, você deve enviar o comprovante no WhatsApp abaixo. Sem o comprovante não poderemos produzir seu pedido.
+                                </p>
+                            </div>
+
+                            <button onclick="sendWhatsApp()" class="w-full bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold py-4 px-6 rounded-xl flex justify-center items-center shadow-lg shadow-green-100 text-lg transition-all hover:scale-[1.01]">
+                                <i data-lucide="message-circle" class="mr-2 w-6 h-6"></i> 
+                                ENVIAR COMPROVANTE AGORA
+                            </button>
+                            
+                            <button onclick="resetShop()" class="w-full mt-6 text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors">
+                                Cancelar compra ou voltar ao início
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Lógica de Ações ---
+
+        function updateConfig(key, value) {
+            state.config[key] = value;
+            render();
+        }
+
+        function updateActiveImage(idx) {
+            state.config.activeImageIndex = idx;
+            render();
+        }
+
+        function addToCart() {
+            const { size, gender, color } = state.config;
+            if (!size || !gender || !color) {
+                showAlert("Por favor, selecione Tamanho, Modelo e Cor antes de continuar.");
+                return;
+            }
+
+            const item = {
+                cartId: Date.now(),
+                productId: state.selectedProduct.id,
+                name: state.selectedProduct.name,
+                price: state.selectedProduct.price,
+                size,
+                gender,
+                color,
+                image: state.selectedProduct.images[0]
+            };
+
+            state.cart.push(item);
+            navigateTo('checkout');
+        }
+
+        function removeFromCart(cartId) {
+            state.cart = state.cart.filter(item => item.cartId !== cartId);
+            render();
+        }
+
+        function copyPix() {
+            // Tenta usar a API moderna primeiro, fallback para execCommand
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(PIX_CODE).then(() => showCopiedState());
+            } else {
+                const textArea = document.createElement("textarea");
+                textArea.value = PIX_CODE;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showCopiedState();
+            }
+        }
+
+        function showCopiedState() {
+            const icon = document.getElementById('copy-icon');
+            icon.setAttribute('data-lucide', 'check');
+            icon.classList.add('text-green-200');
+            lucide.createIcons();
+            
+            // Feedback visual no botão
+            const btn = icon.parentElement;
+            btn.classList.replace('bg-cyan-600', 'bg-green-600');
+
+            setTimeout(() => {
+                render();
+            }, 2000);
+        }
+
+        function sendWhatsApp() {
+            const total = state.cart.reduce((sum, item) => sum + item.price, 0);
+            let text = `Olá! Fiz uma compra para apoiar o *Team Oceane* no TCB e gostaria de enviar meu comprovante.\n\n*Resumo do Pedido:*\n`;
+            state.cart.forEach((item, index) => {
+                text += `${index + 1}. ${item.name} - Cor: ${item.color} | Tam: ${item.size} | Mod: ${item.gender} - R$ ${item.price.toFixed(2)}\n`;
+            });
+            text += `\n*Total:* R$ ${total.toFixed(2)}\n\nSegue o comprovante de pagamento em anexo! 🚀💪`;
+            
+            const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        function resetShop() {
+            state.cart = [];
+            navigateTo('home');
+        }
+
+        // --- Alertas Customizados ---
+        function showAlert(msg) {
+            document.getElementById('alert-message').innerText = msg;
+            document.getElementById('custom-alert').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeAlert() {
+            document.getElementById('custom-alert').classList.add('hidden');
+        }
+
+        // --- Inicialização ---
+        window.onload = () => {
+            render();
+        };
+    </script>
+</body>
+</html>
