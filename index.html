@@ -32,7 +32,6 @@
             border-radius: 10px;
         }
 
-        /* Classes para o Carrossel de Arrastar */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
@@ -115,7 +114,7 @@
                 ],
                 colors: ['Preta', 'Rosa'],
                 sizes: ['P', 'M', 'G', 'GG', 'EXG'],
-                genders: ['Masculino', 'Feminino', 'Unissex']
+                genders: ['Masculino', 'Feminino'] // Alterado: Removido 'Unissex'
             }
         ];
 
@@ -172,7 +171,6 @@
             }
         }
 
-        // --- Carrossel Home (Scroll PC) ---
         function scrollCarousel(productId, direction) {
             const container = document.getElementById(`carousel-${productId}`);
             if (!container) return;
@@ -193,8 +191,6 @@
             });
         }
 
-        // --- Componentes ---
-
         function renderHome() {
             return `
                 <div class="max-w-4xl mx-auto p-4 animate-fadeIn">
@@ -206,9 +202,7 @@
                     <div class="grid md:grid-cols-2 gap-8">
                         ${PRODUCTS.map(product => `
                             <div class="bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl">
-                                <!-- Container do Carrossel de Imagens -->
                                 <div class="relative group">
-                                    <!-- Botões de Navegação (Desktop) -->
                                     <button onclick="scrollCarousel('${product.id}', 'prev')" class="absolute left-2 top-1/2 -translate-y-1/2 z-20 bg-white/80 hover:bg-white p-2 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center">
                                         <i data-lucide="chevron-left" class="w-5 h-5 text-gray-800"></i>
                                     </button>
@@ -224,12 +218,10 @@
                                         `).join('')}
                                     </div>
                                     
-                                    <!-- Badge de Preço -->
                                     <div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full font-bold text-gray-900 shadow-sm pointer-events-none z-10">
                                         R$ ${product.price.toFixed(2).replace('.', ',')}
                                     </div>
 
-                                    <!-- Indicadores de Arrastar (Clicáveis) -->
                                     <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
                                         ${product.images.map((_, i) => `
                                             <button onclick="jumpToImage('${product.id}', ${i})" class="w-2 h-2 rounded-full bg-black/20 hover:bg-black/40 transition-colors"></button>
@@ -433,7 +425,6 @@
             `;
         }
 
-        // --- Lógica de Ações ---
         function updateConfig(key, value) { state.config[key] = value; render(); }
         function updateActiveImage(idx) { state.config.activeImageIndex = idx; render(); }
 
@@ -473,13 +464,12 @@
             const total = state.cart.reduce((sum, item) => sum + item.price, 0);
             let text = `Olá! Fiz uma compra para apoiar o *Team Oceane* no TCB.\n\n*Pedido:*\n`;
             state.cart.forEach((item, index) => {
-                text += `${index + 1}. ${item.name} (${item.color} | ${item.size})\n`;
+                text += `${index + 1}. ${item.name} (${item.color} | ${item.size} | ${item.gender})\n`;
             });
             text += `\n*Total:* R$ ${total.toFixed(2)}\n\nEnvio o comprovante a seguir!`;
             window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
         }
 
-        function resetShop() { state.cart = []; navigateTo('home'); }
         function showAlert(msg) { document.getElementById('alert-message').innerText = msg; document.getElementById('custom-alert').classList.remove('hidden'); lucide.createIcons(); }
         function closeAlert() { document.getElementById('custom-alert').classList.add('hidden'); }
 
