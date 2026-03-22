@@ -31,6 +31,15 @@
             background: #0891b2;
             border-radius: 10px;
         }
+
+        /* Classes para o Carrossel de Arrastar */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
         
         [v-cloak] { display: none; }
     </style>
@@ -56,10 +65,8 @@
         </div>
     </header>
 
-    <!-- Container Principal (Onde as telas serão injetadas) -->
-    <main id="app-content">
-        <!-- O conteúdo será carregado aqui via JavaScript -->
-    </main>
+    <!-- Container Principal -->
+    <main id="app-content"></main>
 
     <!-- Modal de Alerta Customizado -->
     <div id="custom-alert" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 hidden">
@@ -76,7 +83,6 @@
 
     <script>
         // --- Configurações ---
-        // Código Pix Copia e Cola fornecido pelo usuário
         const PIX_CODE = '00020101021126580014br.gov.bcb.pix01365d251342-6918-483a-9a41-ad40fe03e8195204000053039865802BR592048 7 5 J C D RIBEIRO6013SAO JOAQUIM D62070503***6304F71B';
         const WHATSAPP_NUMBER = '5531975043485';
 
@@ -122,7 +128,7 @@
             }
         };
 
-        // --- Funções de Navegação e Renderização ---
+        // --- Navegação ---
         function navigateTo(view, productId = null) {
             state.view = view;
             if (productId) {
@@ -149,7 +155,6 @@
                 case 'payment': container.innerHTML = renderPayment(); break;
             }
 
-            // Inicializa ícones do Lucide após renderizar
             lucide.createIcons();
         }
 
@@ -170,19 +175,39 @@
                 <div class="max-w-4xl mx-auto p-4 animate-fadeIn">
                     <div class="text-center mb-10 mt-6">
                         <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight uppercase">Team Oceane</h1>
-                        <p class="text-gray-600 mt-2 text-lg">Apoie nosso teim no TCB! Garanta sua camisa exclusiva.</p>
+                        <p class="text-gray-600 mt-2 text-lg">Apoie nosso time no TCB! Garanta sua camisa exclusiva.</p>
                     </div>
 
                     <div class="grid md:grid-cols-2 gap-8">
                         ${PRODUCTS.map(product => `
                             <div class="bg-white rounded-2xl shadow-lg overflow-hidden transition-transform transform hover:-translate-y-1">
-                                <div class="h-80 bg-gray-50 overflow-hidden relative group cursor-pointer flex items-center justify-center" onclick="navigateTo('product', '${product.id}')">
-                                    <img src="${product.images[0]}" alt="${product.name}" class="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105 mix-blend-multiply" />
-                                    <div class="absolute inset-0 bg-black bg-opacity-5 group-hover:bg-opacity-0 transition-all"></div>
-                                    <div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full font-bold text-gray-900 shadow-sm">
+                                <!-- Container do Carrossel de Imagens -->
+                                <div class="relative group">
+                                    <div class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-80 bg-gray-50 items-center">
+                                        ${product.images.map(img => `
+                                            <div class="snap-center shrink-0 w-full h-full flex items-center justify-center cursor-pointer" onclick="navigateTo('product', '${product.id}')">
+                                                <img src="${img}" alt="${product.name}" class="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105 mix-blend-multiply" onerror="this.src='https://placehold.co/400x600?text=Imagem+Indisponivel'" />
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    
+                                    <!-- Badge de Preço -->
+                                    <div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full font-bold text-gray-900 shadow-sm pointer-events-none z-10">
                                         R$ ${product.price.toFixed(2).replace('.', ',')}
                                     </div>
+
+                                    <!-- Indicadores de Arrastar (Pontinhos) -->
+                                    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-none">
+                                        ${product.images.map((_, i) => `
+                                            <div class="w-1.5 h-1.5 rounded-full bg-black/20"></div>
+                                        `).join('')}
+                                    </div>
+                                    
+                                    <!-- Dica Visual de Swipe -->
+                                    <div class="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+                                    <div class="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
                                 </div>
+
                                 <div class="p-6 text-center">
                                     <h2 class="text-2xl font-bold text-gray-800">${product.name}</h2>
                                     <p class="text-gray-500 text-sm mt-2">${product.description}</p>
@@ -208,7 +233,7 @@
                     <div class="bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row">
                         <div class="md:w-1/2 bg-gray-50 flex flex-col p-4">
                             <div class="relative h-96 w-full rounded-2xl overflow-hidden shadow-sm flex items-center justify-center bg-white">
-                                <img id="main-product-img" src="${p.images[state.config.activeImageIndex]}" class="w-full h-full object-contain mix-blend-multiply" />
+                                <img id="main-product-img" src="${p.images[state.config.activeImageIndex]}" class="w-full h-full object-contain mix-blend-multiply" onerror="this.src='https://placehold.co/400x600?text=Imagem+Indisponivel'" />
                             </div>
                             ${p.images.length > 1 ? `
                                 <div class="flex gap-2 mt-4 overflow-x-auto pb-2 custom-scrollbar">
@@ -326,7 +351,6 @@
 
         function renderPayment() {
             const total = state.cart.reduce((sum, item) => sum + item.price, 0);
-            // URL para gerar QR Code baseado no código PIX fornecido
             const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(PIX_CODE)}`;
             
             return `
@@ -358,7 +382,6 @@
                                             <span class="ml-2 font-bold text-sm hidden sm:inline">Copiar</span>
                                         </button>
                                     </div>
-                                    <p class="text-xs text-gray-400 mt-2 uppercase">Clique no botão para copiar o código</p>
                                 </div>
                             </div>
 
@@ -367,17 +390,13 @@
                             <div class="bg-blue-50 text-blue-800 p-4 rounded-xl flex items-start mb-8 border border-blue-100">
                                 <i data-lucide="info" class="w-6 h-6 mr-3 flex-shrink-0 mt-0.5"></i>
                                 <p class="text-sm">
-                                    <strong>OBRIGATÓRIO:</strong> Após o pagamento, você deve enviar o comprovante no WhatsApp abaixo. Sem o comprovante não poderemos produzir seu pedido.
+                                    <strong>OBRIGATÓRIO:</strong> Após o pagamento, você deve enviar o comprovante no WhatsApp abaixo.
                                 </p>
                             </div>
 
                             <button onclick="sendWhatsApp()" class="w-full bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold py-4 px-6 rounded-xl flex justify-center items-center shadow-lg shadow-green-100 text-lg transition-all hover:scale-[1.01]">
                                 <i data-lucide="message-circle" class="mr-2 w-6 h-6"></i> 
                                 ENVIAR COMPROVANTE AGORA
-                            </button>
-                            
-                            <button onclick="resetShop()" class="w-full mt-6 text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors">
-                                Cancelar compra ou voltar ao início
                             </button>
                         </div>
                     </div>
@@ -386,16 +405,8 @@
         }
 
         // --- Lógica de Ações ---
-
-        function updateConfig(key, value) {
-            state.config[key] = value;
-            render();
-        }
-
-        function updateActiveImage(idx) {
-            state.config.activeImageIndex = idx;
-            render();
-        }
+        function updateConfig(key, value) { state.config[key] = value; render(); }
+        function updateActiveImage(idx) { state.config.activeImageIndex = idx; render(); }
 
         function addToCart() {
             const { size, gender, color } = state.config;
@@ -403,89 +414,47 @@
                 showAlert("Por favor, selecione Tamanho, Modelo e Cor antes de continuar.");
                 return;
             }
-
-            const item = {
+            state.cart.push({
                 cartId: Date.now(),
-                productId: state.selectedProduct.id,
                 name: state.selectedProduct.name,
                 price: state.selectedProduct.price,
-                size,
-                gender,
-                color,
+                size, gender, color,
                 image: state.selectedProduct.images[0]
-            };
-
-            state.cart.push(item);
+            });
             navigateTo('checkout');
         }
 
-        function removeFromCart(cartId) {
-            state.cart = state.cart.filter(item => item.cartId !== cartId);
-            render();
-        }
+        function removeFromCart(cartId) { state.cart = state.cart.filter(item => item.cartId !== cartId); render(); }
 
         function copyPix() {
-            // Tenta usar a API moderna primeiro, fallback para execCommand
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(PIX_CODE).then(() => showCopiedState());
-            } else {
-                const textArea = document.createElement("textarea");
-                textArea.value = PIX_CODE;
-                document.body.appendChild(textArea);
-                textArea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textArea);
-                showCopiedState();
-            }
-        }
-
-        function showCopiedState() {
+            const el = document.createElement("textarea");
+            el.value = PIX_CODE;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            
             const icon = document.getElementById('copy-icon');
             icon.setAttribute('data-lucide', 'check');
-            icon.classList.add('text-green-200');
             lucide.createIcons();
-            
-            // Feedback visual no botão
-            const btn = icon.parentElement;
-            btn.classList.replace('bg-cyan-600', 'bg-green-600');
-
-            setTimeout(() => {
-                render();
-            }, 2000);
+            setTimeout(render, 2000);
         }
 
         function sendWhatsApp() {
             const total = state.cart.reduce((sum, item) => sum + item.price, 0);
-            let text = `Olá! Fiz uma compra para apoiar o *Team Oceane* no TCB e gostaria de enviar meu comprovante.\n\n*Resumo do Pedido:*\n`;
+            let text = `Olá! Fiz uma compra para apoiar o *Team Oceane* no TCB.\n\n*Pedido:*\n`;
             state.cart.forEach((item, index) => {
-                text += `${index + 1}. ${item.name} - Cor: ${item.color} | Tam: ${item.size} | Mod: ${item.gender} - R$ ${item.price.toFixed(2)}\n`;
+                text += `${index + 1}. ${item.name} (${item.color} | ${item.size})\n`;
             });
-            text += `\n*Total:* R$ ${total.toFixed(2)}\n\nSegue o comprovante de pagamento em anexo! 🚀💪`;
-            
-            const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
-            window.open(url, '_blank');
+            text += `\n*Total:* R$ ${total.toFixed(2)}\n\nEnvio o comprovante a seguir!`;
+            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
         }
 
-        function resetShop() {
-            state.cart = [];
-            navigateTo('home');
-        }
+        function resetShop() { state.cart = []; navigateTo('home'); }
+        function showAlert(msg) { document.getElementById('alert-message').innerText = msg; document.getElementById('custom-alert').classList.remove('hidden'); lucide.createIcons(); }
+        function closeAlert() { document.getElementById('custom-alert').classList.add('hidden'); }
 
-        // --- Alertas Customizados ---
-        function showAlert(msg) {
-            document.getElementById('alert-message').innerText = msg;
-            document.getElementById('custom-alert').classList.remove('hidden');
-            lucide.createIcons();
-        }
-
-        function closeAlert() {
-            document.getElementById('custom-alert').classList.add('hidden');
-        }
-
-        // --- Inicialização ---
-        window.onload = () => {
-            render();
-        };
+        window.onload = render;
     </script>
 </body>
 </html>
